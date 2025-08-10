@@ -1,4 +1,4 @@
-package com.example.flutter_mbti_app
+package com.ezlevup.flutter_mbti_app
 
 import io.flutter.embedding.android.FlutterActivity
 

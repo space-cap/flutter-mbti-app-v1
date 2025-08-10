@@ -1,9 +1,12 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:provider/provider.dart';
 import '../models/question.dart';
 import '../models/test_result.dart';
-import '../utils/mbti_calculator.dart';
+import '../utils/mbti_result_provider.dart';
+import '../utils/error_handler.dart';
+import '../widgets/loading_widget.dart';
 import 'result_screen.dart';
 
 class QuestionScreen extends StatefulWidget {
@@ -40,11 +43,9 @@ class _QuestionScreenState extends State<QuestionScreen> {
         isLoading = false;
       });
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('질문을 로드하는데 실패했습니다: $e'),
-            backgroundColor: Colors.red,
-          ),
+        ErrorHandler.showErrorSnackBar(
+          context,
+          '질문을 로드하는데 실패했습니다: ${ErrorHandler.getErrorMessage(e)}',
         );
       }
     }
@@ -94,48 +95,57 @@ class _QuestionScreenState extends State<QuestionScreen> {
   }
 
   Future<void> _navigateToResult() async {
+    if (!mounted) return;
+    
     try {
       // Show loading indicator
-      showDialog(
-        context: context,
-        barrierDismissible: false,
-        builder: (context) => const Center(
-          child: CircularProgressIndicator(),
-        ),
+      ErrorHandler.showLoadingDialog(
+        context,
+        message: '결과를 계산하고 있어요...',
       );
 
-      // Calculate test result
-      final testResult = await MBTICalculator.calculateTestResult(
+      final provider = context.read<MBTIResultProvider>();
+      
+      // Calculate and save test result using provider
+      await provider.calculateAndSaveResult(
         answers: answers,
         startTime: testStartTime!,
         endTime: DateTime.now(),
       );
 
-      // Save the result
-      await MBTICalculator.saveTestResult(testResult);
-
       // Close loading indicator
       if (mounted) {
-        Navigator.of(context).pop();
+        ErrorHandler.hideLoadingDialog(context);
         
-        // Navigate to result screen
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(
-            builder: (context) => ResultScreen(testResult: testResult),
-          ),
+        // Show success message briefly
+        ErrorHandler.showSuccessSnackBar(
+          context,
+          '결과가 성공적으로 저장되었습니다!',
+          duration: const Duration(seconds: 2),
         );
+        
+        // Navigate to result screen after brief delay
+        await Future.delayed(const Duration(milliseconds: 800));
+        
+        if (mounted) {
+          Navigator.of(context).pushReplacement(
+            MaterialPageRoute(
+              builder: (context) => ResultScreen(
+                testResult: provider.currentResult!,
+              ),
+            ),
+          );
+        }
       }
     } catch (e) {
       // Close loading indicator
       if (mounted) {
-        Navigator.of(context).pop();
+        ErrorHandler.hideLoadingDialog(context);
         
         // Show error
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('결과를 계산하는데 실패했습니다: $e'),
-            backgroundColor: Colors.red,
-          ),
+        ErrorHandler.showErrorSnackBar(
+          context,
+          '결과를 계산하는데 실패했습니다: ${ErrorHandler.getErrorMessage(e)}',
         );
       }
     }
@@ -161,22 +171,13 @@ class _QuestionScreenState extends State<QuestionScreen> {
     
     if (isLoading) {
       return Scaffold(
-        body: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const CircularProgressIndicator(
-                color: Color(0xFF9C88FF),
-              ),
-              const SizedBox(height: 16),
-              Text(
-                '질문을 준비하고 있어요...',
-                style: theme.textTheme.bodyLarge?.copyWith(
-                  color: theme.colorScheme.onSurfaceVariant,
-                ),
-              ),
-            ],
-          ),
+        appBar: AppBar(
+          title: const Text('MBTI 테스트'),
+          backgroundColor: Colors.transparent,
+        ),
+        body: const LoadingWidget(
+          message: '질문을 준비하고 있어요...',
+          size: 48,
         ),
       );
     }
@@ -185,9 +186,11 @@ class _QuestionScreenState extends State<QuestionScreen> {
       return Scaffold(
         appBar: AppBar(
           title: const Text('MBTI 테스트'),
+          backgroundColor: Colors.transparent,
         ),
-        body: const Center(
-          child: Text('질문을 로드할 수 없습니다.'),
+        body: ErrorHandler.buildErrorWidget(
+          message: '질문을 로드할 수 없습니다.',
+          onRetry: _loadQuestions,
         ),
       );
     }
@@ -196,7 +199,7 @@ class _QuestionScreenState extends State<QuestionScreen> {
     final progress = (currentQuestionIndex + 1) / questions.length;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF8F6FF),
+      backgroundColor: theme.colorScheme.surface,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,

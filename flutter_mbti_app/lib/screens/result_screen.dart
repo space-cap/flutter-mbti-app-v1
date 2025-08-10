@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:share_plus/share_plus.dart';
 import '../models/models.dart';
+import '../utils/share_utils.dart';
 import 'home_screen.dart';
 
 class ResultScreen extends StatefulWidget {
@@ -21,6 +21,7 @@ class _ResultScreenState extends State<ResultScreen>
   late AnimationController _progressAnimationController;
   late Animation<double> _slideAnimation;
   late Animation<double> _fadeAnimation;
+  final GlobalKey _shareWidgetKey = GlobalKey();
 
   @override
   void initState() {
@@ -92,7 +93,10 @@ class _ResultScreenState extends State<ResultScreen>
                   children: [
                     _buildHeader(),
                     const SizedBox(height: 32),
-                    _buildTypeCard(),
+                    RepaintBoundary(
+                      key: _shareWidgetKey,
+                      child: _buildShareableContent(),
+                    ),
                     const SizedBox(height: 32),
                     _buildScoreVisualization(),
                     const SizedBox(height: 32),
@@ -129,69 +133,8 @@ class _ResultScreenState extends State<ResultScreen>
     );
   }
 
-  Widget _buildTypeCard() {
-    final mbtiResult = widget.testResult.mbtiResult;
-    final colorScheme = Theme.of(context).colorScheme;
-    
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [
-            colorScheme.primaryContainer,
-            colorScheme.primaryContainer.withOpacity(0.8),
-          ],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: colorScheme.shadow.withOpacity(0.1),
-            blurRadius: 20,
-            offset: const Offset(0, 8),
-          ),
-        ],
-      ),
-      child: Column(
-        children: [
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-            decoration: BoxDecoration(
-              color: colorScheme.primary,
-              borderRadius: BorderRadius.circular(25),
-            ),
-            child: Text(
-              mbtiResult.typeCode,
-              style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                color: colorScheme.onPrimary,
-                fontWeight: FontWeight.bold,
-                letterSpacing: 2,
-              ),
-            ),
-          ),
-          const SizedBox(height: 16),
-          Text(
-            mbtiResult.nickname,
-            style: Theme.of(context).textTheme.titleLarge?.copyWith(
-              color: colorScheme.onPrimaryContainer,
-              fontWeight: FontWeight.w600,
-            ),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 8),
-          Text(
-            mbtiResult.description,
-            style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-              color: colorScheme.onPrimaryContainer.withOpacity(0.8),
-              height: 1.5,
-            ),
-            textAlign: TextAlign.center,
-          ),
-        ],
-      ),
-    );
+  Widget _buildShareableContent() {
+    return ShareUtils.createShareableWidget(widget.testResult.mbtiResult);
   }
 
   Widget _buildScoreVisualization() {
@@ -512,18 +455,58 @@ class _ResultScreenState extends State<ResultScreen>
   }
 
   void _shareResult() {
-    final mbtiResult = widget.testResult.mbtiResult;
-    final shareText = '''
-🎉 MBTI 테스트 결과 🎉
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) => _buildShareOptionsBottomSheet(),
+    );
+  }
 
-유형: ${mbtiResult.typeCode}
-별칭: ${mbtiResult.nickname}
-
-${mbtiResult.description}
-
-#MBTI #성격검사 #${mbtiResult.typeCode}
-''';
-    
-    Share.share(shareText);
+  Widget _buildShareOptionsBottomSheet() {
+    return Container(
+      padding: const EdgeInsets.all(24),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 40,
+            height: 4,
+            decoration: BoxDecoration(
+              color: Colors.grey[300],
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
+          const SizedBox(height: 24),
+          Text(
+            '공유 방법 선택',
+            style: Theme.of(context).textTheme.titleLarge?.copyWith(
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 24),
+          ListTile(
+            leading: const Icon(Icons.text_fields, color: Colors.blue),
+            title: const Text('텍스트로 공유'),
+            subtitle: const Text('결과를 텍스트 형태로 공유합니다'),
+            onTap: () {
+              Navigator.pop(context);
+              ShareUtils.shareText(widget.testResult.mbtiResult);
+            },
+          ),
+          ListTile(
+            leading: const Icon(Icons.image, color: Colors.green),
+            title: const Text('이미지로 공유'),
+            subtitle: const Text('결과를 아름다운 이미지로 공유합니다'),
+            onTap: () {
+              Navigator.pop(context);
+              ShareUtils.shareImage(_shareWidgetKey, widget.testResult.mbtiResult);
+            },
+          ),
+          const SizedBox(height: 16),
+        ],
+      ),
+    );
   }
 }

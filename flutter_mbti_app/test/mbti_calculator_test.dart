@@ -41,7 +41,7 @@ void main() {
       expect(MBTICalculator.determineType(entjScores), equals(MBTIType.entj));
 
       // Test ISFP
-      final isfpScores = const MBTIScores(e: 1, i: 6, s: 5, n: 2, t: 2, f: 5, j: 2, p: 5);
+      const isfpScores = MBTIScores(e: 1, i: 6, s: 5, n: 2, t: 2, f: 5, j: 2, p: 5);
       expect(MBTICalculator.determineType(isfpScores), equals(MBTIType.isfp));
     });
 
@@ -63,7 +63,7 @@ void main() {
     });
 
     test('analyzeDimensionStrengths should calculate percentages correctly', () {
-      final scores = const MBTIScores(e: 3, i: 1, s: 2, n: 2, t: 4, f: 0, j: 1, p: 3);
+      const scores = MBTIScores(e: 3, i: 1, s: 2, n: 2, t: 4, f: 0, j: 1, p: 3);
       final strengths = MBTICalculator.analyzeDimensionStrengths(scores);
 
       expect(strengths['Extraversion'], equals(75.0)); // 3/(3+1) * 100

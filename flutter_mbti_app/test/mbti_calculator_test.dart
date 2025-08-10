@@ -37,7 +37,7 @@ void main() {
 
     test('determineType should return correct MBTI type based on scores', () {
       // Test ENTJ
-      final entjScores = const MBTIScores(e: 5, i: 2, s: 2, n: 5, t: 6, f: 1, j: 4, p: 3);
+      const entjScores = MBTIScores(e: 5, i: 2, s: 2, n: 5, t: 6, f: 1, j: 4, p: 3);
       expect(MBTICalculator.determineType(entjScores), equals(MBTIType.entj));
 
       // Test ISFP

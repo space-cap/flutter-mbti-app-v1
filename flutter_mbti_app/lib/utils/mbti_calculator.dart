@@ -38,16 +38,17 @@ class MBTICalculator {
 
     try {
       final String data = await rootBundle.loadString('assets/data/mbti_results.json');
-      final Map<String, dynamic> jsonData = json.decode(data);
+      final List<dynamic> jsonData = json.decode(data);
       
       _mbtiResults = <MBTIType, MBTIResult>{};
       
-      for (final entry in jsonData.entries) {
-        final typeKey = entry.key.toLowerCase();
+      for (final item in jsonData) {
+        final Map<String, dynamic> mbtiData = item as Map<String, dynamic>;
+        final typeKey = mbtiData['type'] as String;
         final mbtiType = MBTIType.values.firstWhere(
-          (type) => type.name == typeKey,
+          (type) => type.name == typeKey.toLowerCase(),
         );
-        _mbtiResults![mbtiType] = MBTIResult.fromJson(entry.value);
+        _mbtiResults![mbtiType] = MBTIResult.fromJson(mbtiData);
       }
       
       return _mbtiResults!;
@@ -229,6 +230,20 @@ class MBTICalculator {
     }
     
     return strengths;
+  }
+
+  /// MBTI 유형별 결과 데이터 가져오기
+  static MBTIResult getMBTIResult(MBTIType type) {
+    if (_mbtiResults == null) {
+      throw Exception('MBTI 결과 데이터가 로드되지 않았습니다. loadMBTIResults()를 먼저 호출하세요.');
+    }
+    
+    final result = _mbtiResults![type];
+    if (result == null) {
+      throw Exception('$type에 대한 결과 데이터를 찾을 수 없습니다');
+    }
+    
+    return result;
   }
 
   /// 테스트 통계 정보 계산
